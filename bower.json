@@ -1,0 +1,27 @@
+{
+  "name": "coinative-core",
+  "version": "0.0.1",
+  "homepage": "https://github.com/IonDriveSoftware/coinative-core",
+  "authors": [
+    "Coinative"
+  ],
+  "description": "Crypto currency library for the browser and nodejs.",
+  "main": "dist/coinative-core.min.js",
+  "keywords": [
+    "bitcoin",
+    "litecoin"
+  ],
+  "scripts": {
+    "install": "make build",
+    "test": "make test"
+  },
+  "license": "MIT",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}
