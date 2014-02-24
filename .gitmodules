@@ -1,0 +1,3 @@
+[submodule "test-int/deps/bitcoin-testnet-box"]
+	path = test-int/deps/bitcoin-testnet-box
+	url = https://github.com/freewil/bitcoin-testnet-box.git
