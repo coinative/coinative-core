@@ -1,8 +1,7 @@
 'use strict'
 // http://tools.ietf.org/html/rfc4231
 describe('MultiSigKey', function () {
-
-  describe('new MultiSigKey (invalid inputs)', function () {
+  describe('(invalid inputs)', function () {
     it ('should error where public keys > 22', function () {
       expect(function () { new bitcoin.MultiSigKey(new Array(22), 2) }).to.throw();
     });
