@@ -1,5 +1,5 @@
 var chai = require('chai');
-var bitcoin = require('../dist/coinative-core-min');
+var bitcoin = require('../dist/coinative-core.min');
 
 var sjcl = require('sjcl');
 global.sjcl = sjcl;

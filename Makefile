@@ -13,7 +13,8 @@ build-sjcl:
 
 build:	clean	build-sjcl
 	mkdir -p dist
-	node_modules/uglify-js/bin/uglifyjs $(LIB_JSBN_SRC) $(LIB_SJCL_SRC) $(LIB_SJCL_EXT_SRC) $(LIB_SRC) --output dist/coinative-core-min.js
+	node_modules/uglify-js/bin/uglifyjs $(LIB_JSBN_SRC) $(LIB_SJCL_SRC) $(LIB_SJCL_EXT_SRC) $(LIB_SRC) -b --output dist/coinative-core.js
+	node_modules/uglify-js/bin/uglifyjs $(LIB_JSBN_SRC) $(LIB_SJCL_SRC) $(LIB_SJCL_EXT_SRC) $(LIB_SRC) --output dist/coinative-core.min.js
 
 test-node:	build
 	node_modules/.bin/mocha test/setup.js "test/**/*.specs.js" --reporter spec

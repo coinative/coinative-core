@@ -13,7 +13,7 @@ module.exports = function(config) {
 
     // list of files / patterns to load in the browser
     files: [
-      'bitcoin.js',
+      'dist/coinative-core.js',
       'test/convert.js',
       'test/**/*.specs.js'
     ],
