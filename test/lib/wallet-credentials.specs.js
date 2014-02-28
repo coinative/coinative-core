@@ -11,10 +11,6 @@ describe('WalletCredentials', function () {
       expect(credentials.id).to.equal('00000000-0000-0000-0000-000000000000');
     });
 
-    it('should set isAlias', function () {
-      expect(credentials.isAlias).to.be.false;
-    });
-
     it('should set serverId', function () {
       expect(credentials.serverId).to.exist;
       expect(credentials.serverId.length).to.equal(HEX_LENGTH_256BITS);
@@ -32,10 +28,6 @@ describe('WalletCredentials', function () {
 
     it('should set id', function () {
       expect(credentials.id).to.equal('email@example.com');
-    });
-
-    it('should set isAlias', function () {
-      expect(credentials.isAlias).to.be.true;
     });
 
     it('should set serverId', function () {

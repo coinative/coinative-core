@@ -4978,21 +4978,17 @@ bitcoin.util = {};
 bitcoin.WalletCredentials = {};
 
 (function() {
-    var validUUIDRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     var defaults = {
         iterations: 2e3
     };
     var WalletCredentials = bitcoin.WalletCredentials = function(id, password, opts) {
         opts = opts || defaults;
         this.id = id;
-        this.isAlias = !validUUIDRegex.test(id);
         var prk = sjcl.codec.bytes.fromBits(sjcl.misc.pbkdf2(password, this.id, opts.iterations, 256));
-        if (!this.isAlias) {
-            Object.defineProperty(this, "encryptionKey", {
-                enumerable: false,
-                value: sjcl.misc.hkdf.expand(prk, "encryption key")
-            });
-        }
+        Object.defineProperty(this, "encryptionKey", {
+            enumerable: false,
+            value: sjcl.misc.hkdf.expand(prk, "encryption key")
+        });
         this.serverId = sjcl.misc.hkdf.expand(prk, "server identifier");
     };
 })();
