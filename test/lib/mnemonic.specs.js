@@ -68,23 +68,6 @@ describe('Mnemonic', function () {
     it('throws an exception when the input is not a valid hex string', function () {
       expect(function () { bitcoin.mnemonic.encodeHex('ghijklmnopq12345') } ).to.throw();
     });
-
-    it('test', function(){
-      var wlist = [
-        "spiral", "squeeze", "strain", "sunset", "suspend", "sympathy",
-        "thigh", "throne", "total", "unseen", "weapon", "weary"
-      ];
-
-      var mnemonic = bitcoin.mnemonic.encodeUtf8('v19sharky101password123')
-      var mnemonicDecoded = bitcoin.mnemonic.decodeUtf8(mnemonic);
-      
-
-      console.log(mnemonic);
-      console.log(mnemonicDecoded)
-
-      expect(bitcoin.mnemonic.encodeHex('0028644c0028644f0028645200286455')).eql(wlist);
-    })
-
   })
 });
 
