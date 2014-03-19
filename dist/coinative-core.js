@@ -4077,6 +4077,33 @@ bitcoin.ECKey = {};
     };
 })();
 
+bitcoin.ExtendedKey = {};
+
+(function() {
+    var ExtendedKey = bitcoin.ExtendedKey = function(xKey) {
+        this.deserialize(xKey);
+        if (!this.isValid()) throw "checksum failed.";
+    };
+    ExtendedKey.prototype.isValid = function() {
+        return sjcl.bitArray.equal(sjcl.bitArray.bitSlice(this.keyHash, 0, 32), this.checksum);
+    };
+    ExtendedKey.prototype.deserialize = function(xKey) {
+        var xPubBytes = bitcoin.base58.decode(xKey);
+        var keyBytes = xPubBytes.slice(0, 78);
+        this.key = sjcl.codec.bytes.toBits(keyBytes);
+        this.checksum = sjcl.codec.bytes.toBits(xPubBytes.slice(78, 82));
+        this.keyHash = sjcl.codec.bytes.toBits(bitcoin.util.sha256sha256(keyBytes));
+    };
+    ExtendedKey.isValid = function(xKey) {
+        var xKeyBytes = bitcoin.base58.decode(xKey);
+        var keyBytes = xKeyBytes.slice(0, 78);
+        var key = sjcl.codec.bytes.toBits(keyBytes);
+        var checksum = sjcl.codec.bytes.toBits(xKeyBytes.slice(78, 82));
+        var keyHash = sjcl.codec.bytes.toBits(bitcoin.util.sha256sha256(xKeyBytes));
+        return sjcl.bitArray.equal(sjcl.bitArray.bitSlice(keyHash, 0, 32), checksum);
+    };
+})();
+
 "use strict";
 
 bitcoin.HDKey = {};
@@ -4184,6 +4211,9 @@ bitcoin.HDKey = {};
         return pub;
     };
     HDKey.deserializeKey = function(extKey) {
+        if (extKey instanceof bitcoin.ExtendedKey) {
+            extKey = extKey.key;
+        }
         if (sjcl.bitArray.bitLength(extKey) != 624) {
             throw new Error("Not enough data");
         }
