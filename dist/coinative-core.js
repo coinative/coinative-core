@@ -3834,6 +3834,15 @@ bitcoin.Address = {};
         var versionInfo = Address.versionsReversed[this.version];
         return versionInfo.type == "pubKey";
     };
+    Address.isValid = function(address) {
+        var bytes = bitcoin.base58.decode(string);
+        var hash = bytes.slice(0, 21);
+        var checksum = sha256sha256(hash);
+        if (checksum[0] != bytes[21] || checksum[1] != bytes[22] || checksum[2] != bytes[23] || checksum[3] != bytes[24]) {
+            return false;
+        }
+        return true;
+    };
     Address.versions = {
         bitcoin: {
             testnet: {
@@ -4095,12 +4104,11 @@ bitcoin.ExtendedKey = {};
         this.keyHash = sjcl.codec.bytes.toBits(bitcoin.util.sha256sha256(keyBytes));
     };
     ExtendedKey.isValid = function(xKey) {
-        var xKeyBytes = bitcoin.base58.decode(xKey);
-        var keyBytes = xKeyBytes.slice(0, 78);
-        var key = sjcl.codec.bytes.toBits(keyBytes);
-        var checksum = sjcl.codec.bytes.toBits(xKeyBytes.slice(78, 82));
-        var keyHash = sjcl.codec.bytes.toBits(bitcoin.util.sha256sha256(xKeyBytes));
-        return sjcl.bitArray.equal(sjcl.bitArray.bitSlice(keyHash, 0, 32), checksum);
+        var xPubBytes = bitcoin.base58.decode(xKey);
+        var keyBytes = xPubBytes.slice(0, 78);
+        var checksumBytes = xPubBytes.slice(78, 82);
+        var keyHash = bitcoin.util.sha256sha256(keyBytes);
+        return keyHash[0] === checksumBytes[0] && keyHash[1] === checksumBytes[1] && keyHash[2] === checksumBytes[2] && keyHash[3] === checksumBytes[3];
     };
 })();
 
