@@ -3835,7 +3835,7 @@ bitcoin.Address = {};
         return versionInfo.type == "pubKey";
     };
     Address.isValid = function(address) {
-        var bytes = bitcoin.base58.decode(string);
+        var bytes = bitcoin.base58.decode(address);
         var hash = bytes.slice(0, 21);
         var checksum = sha256sha256(hash);
         if (checksum[0] != bytes[21] || checksum[1] != bytes[22] || checksum[2] != bytes[23] || checksum[3] != bytes[24]) {
