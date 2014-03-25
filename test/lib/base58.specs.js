@@ -17,6 +17,4 @@ describe('Base58', function () {
     expect(addressEnc).to.equal('16UjcYNBG9GTK4uq2f7yYEbuifqCzoLMGS');
     expect(unencodedAddress).to.equal(addressDec);
   });
-
-
 });

@@ -1,7 +1,7 @@
 'use strict';
 
 // https://tools.ietf.org/html/rfc5869
-describe('sjcl.misc.HKDF', function () {
+describe('sjcl.misc.hkdf', function () {
   it('Test Case 1', function () {
     var ikm = hex.toBytes('0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b');
     var salt = hex.toBytes('000102030405060708090a0b0c');

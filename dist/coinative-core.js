@@ -1434,81 +1434,6 @@ sjcl.codec.base64url = {
     }
 };
 
-sjcl.codec.base58 = {
-    _chars: "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz",
-    fromBits: function(arr) {
-        if (sjcl.bitArray.bitLength(arr) > 0) {
-            var x = sjcl.bn.fromBits(arr), modulus = sjcl.bn.fromBits(arr), out = "", c = sjcl.codec.base58._chars;
-            while (x.greaterEquals(1)) {
-                var result = this._divmod58(x), x = result.q, charIndex = result.n.getLimb(0);
-                out = c[charIndex] + out;
-            }
-            var hex = sjcl.codec.hex.fromBits(arr), zeros = hex.match(/^0*/)[0].length, zeroBytes = Math.floor(zeros / 2);
-            for (var i = zeroBytes; i > 0; i--) {
-                out = "1" + out;
-            }
-            return out;
-        } else {
-            return "";
-        }
-    },
-    toBits: function(str) {
-        var powersOf58 = this._powersOf58(str.length);
-        var value = new sjcl.bn(), i, c = sjcl.codec.base58._chars, bitCount = 0;
-        for (i = 0; i < str.length; i++) {
-            var x = c.indexOf(str.charAt(i));
-            var pos = str.length - i - 1;
-            if (x < 0) {
-                throw new sjcl.exception.invalid("this isn't base58!");
-            }
-            var addend = new sjcl.bn(x).mul(powersOf58[pos]);
-            value.addM(addend);
-        }
-        if (str.length > 0) {
-            var trimmedValue = value.trim(), hexValue = trimmedValue == 0 ? "" : trimmedValue.toString().substr(2), zeros = str.match(/^1*/)[0].length, bitCount = hexValue.length * 4 + zeros * 8;
-            return trimmedValue.toBits(bitCount);
-        } else {
-            return "";
-        }
-    },
-    _divmod58: function(n) {
-        var result = {
-            q: new sjcl.bn(0),
-            n: new sjcl.bn(n)
-        };
-        var d = new sjcl.bn(58);
-        var powerOf58 = new sjcl.bn(1), powersOf58table = [ powerOf58 ];
-        while (result.n.greaterEquals(powerOf58)) {
-            powersOf58table.push(powerOf58);
-            powerOf58 = powerOf58.mul(d);
-        }
-        while (result.n.greaterEquals(d)) {
-            var i = powersOf58table.length - 1, addToQ = 1;
-            if (powersOf58table.length > 1) {
-                addToQ = powersOf58table[i - 1];
-            }
-            powerOf58 = powersOf58table[i];
-            while (powerOf58.greaterEquals(result.n.add(1))) {
-                i--;
-                powerOf58 = powersOf58table[i];
-                addToQ = powersOf58table[i - 1];
-            }
-            result.n.subM(powerOf58);
-            result.q.addM(addToQ);
-            result.n.normalize();
-        }
-        return result;
-    },
-    _powersOf58: function(maxPower) {
-        var out = [ new sjcl.bn(1) ];
-        for (var i = 1; i <= maxPower; i++) {
-            var result = new sjcl.bn(58).mul(out[i - 1]);
-            out.push(result);
-        }
-        return out;
-    }
-};
-
 sjcl.codec.bytes = {
     fromBits: function(arr) {
         var out = [], bl = sjcl.bitArray.bitLength(arr), i, tmp;
@@ -3573,6 +3498,52 @@ sjcl.keyexchange.srp = {
             N: "AC6BDB41324A9A9BF166DE5E1389582FAF72B6651987EE07FC319294" + "3DB56050A37329CBB4A099ED8193E0757767A13DD52312AB4B03310D" + "CD7F48A9DA04FD50E8083969EDB767B0CF6095179A163AB3661A05FB" + "D5FAAAE82918A9962F0B93B855F97993EC975EEAA80D740ADBF4FF74" + "7359D041D5C33EA71D281E446B14773BCA97B43A23FB801676BD207A" + "436C6481F1D2B9078717461A5B9D32E688F87748544523B524B0D57D" + "5EA77A2775D2ECFA032CFBDBF52FB3786160279004E57AE6AF874E73" + "03CE53299CCC041C7BC308D82A5698F3A8D0C38271AE35F8E9DBFBB6" + "94B5C803D89F7AE435DE236D525F54759B65E372FCD68EF20FA7111F" + "9E4AFF73",
             g: 2
         }
+    }
+};
+
+"use strict";
+
+sjcl.codec.base32 = {
+    _chars: "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567",
+    fromBits: function(arr, _noEquals) {
+        var out = "", i, bits = 0, c = sjcl.codec.base32._chars, ta = 0, bl = sjcl.bitArray.bitLength(arr);
+        for (i = 0; out.length * 5 < bl; ) {
+            out += c.charAt((ta ^ arr[i] >>> bits) >>> 27);
+            if (bits < 5) {
+                ta = arr[i] << 5 - bits;
+                bits += 27;
+                i++;
+            } else {
+                ta <<= 5;
+                bits -= 5;
+            }
+        }
+        while (out.length % 8 && !_noEquals) {
+            out += "=";
+        }
+        return out;
+    },
+    toBits: function(str) {
+        str = str.replace(/\s|=/g, "");
+        var out = [], i, bits = 0, c = sjcl.codec.base32._chars, ta = 0, x;
+        for (i = 0; i < str.length; i++) {
+            x = c.indexOf(str.charAt(i));
+            if (x < 0) {
+                throw new sjcl.exception.invalid("this isn't base32!");
+            }
+            if (bits > 27) {
+                bits -= 27;
+                out.push(ta ^ x >>> bits);
+                ta = x << 32 - bits;
+            } else {
+                bits += 5;
+                ta ^= x << 32 - bits;
+            }
+        }
+        if (bits & 56) {
+            out.push(sjcl.bitArray.partial(bits & 56, ta, 1));
+        }
+        return out;
     }
 };
 

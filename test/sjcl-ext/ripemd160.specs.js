@@ -1,6 +1,6 @@
 'use strict';
 // http://homes.esat.kuleuven.be/~bosselae/sjcl.hash.ripemd160.hash.html
-describe('RIPEMD-160 Test Vectors', function () {
+describe('sjcl.hash.ripemd160', function () {
   it('vector# 0', function () {
     expect(bits.toHex(sjcl.hash.ripemd160.hash(''))).to.equal('9c1185a5c5e9fc54612808977ee8f548b2258d31');
   });
