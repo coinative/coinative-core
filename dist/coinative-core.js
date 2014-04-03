@@ -3547,32 +3547,36 @@ sjcl.codec.base32 = {
     }
 };
 
-"use strict";
-
 sjcl.misc.hkdf = {
-    extract: function(key, message) {
-        return sjcl.codec.hex.fromBits(new sjcl.misc.hmac(sjcl.codec.bytes.toBits(key), sjcl.hash.sha256).encrypt(sjcl.codec.bytes.toBits(message)));
+    extract: function(salt, ikm, Hash) {
+        if (typeof salt === "string") {
+            salt = sjcl.codec.utf8String.toBits(salt);
+        }
+        if (typeof ikm === "string") {
+            ikm = sjcl.codec.utf8String.toBits(ikm);
+        }
+        Hash = Hash || sjcl.hash.sha256;
+        var prf = new sjcl.misc.hmac(salt, Hash);
+        return prf.encrypt(ikm);
     },
-    expand: function(prk, info, l) {
+    expand: function(prk, info, length, Hash) {
+        if (length < 0) {
+            throw sjcl.exception.invalid("invalid params to hkdf");
+        }
         if (typeof prk === "string") {
-            prk = sjcl.codec.bytes.fromBits(sjcl.codec.utf8String.toBits(prk));
+            prk = sjcl.codec.utf8String.toBits(prk);
         }
         if (typeof info === "string") {
-            info = sjcl.codec.bytes.fromBits(sjcl.codec.utf8String.toBits(info));
+            info = sjcl.codec.utf8String.toBits(info);
         }
-        var hashlen = 32;
-        l = l || hashlen;
-        var output = [];
-        var n = Math.ceil(l / hashlen);
-        var ti = [];
-        for (var i = 1; i <= n; i++) {
-            ti = sjcl.codec.bytes.fromBits(new sjcl.misc.hmac(sjcl.codec.bytes.toBits(prk), sjcl.hash.sha256).encrypt(sjcl.codec.bytes.toBits(ti.concat(info).concat(i))));
-            output = output.concat(ti);
+        Hash = Hash || sjcl.hash.sha256;
+        var prf = new sjcl.misc.hmac(prk, Hash), i, t = [], out = [], b = sjcl.bitArray, os = Hash.prototype.outputSize || 256, length = length || os, n = Math.ceil(length / os);
+        for (i = 1; i <= n; i++) {
+            t = prf.encrypt(b.concat(t, b.concat(info, [ b.partial(8, i) ])));
+            out = out.concat(t);
         }
-        if (output.length > l) {
-            output = output.slice(0, l);
-        }
-        return sjcl.codec.hex.fromBits(sjcl.codec.bytes.toBits(output));
+        out = b.clamp(out, length);
+        return out;
     }
 };
 
@@ -5124,12 +5128,12 @@ bitcoin.WalletCredentials = {};
     var WalletCredentials = bitcoin.WalletCredentials = function(id, password, opts) {
         opts = opts || defaults;
         this.id = id;
-        var prk = sjcl.codec.bytes.fromBits(sjcl.misc.pbkdf2(password, this.id, opts.iterations, 256));
+        var prk = sjcl.misc.pbkdf2(password, this.id, opts.iterations, 256);
         Object.defineProperty(this, "encryptionKey", {
             enumerable: false,
-            value: sjcl.misc.hkdf.expand(prk, "encryption key")
+            value: sjcl.codec.hex.fromBits(sjcl.misc.hkdf.expand(prk, "encryption key"))
         });
-        this.walletId = sjcl.misc.hkdf.expand(prk, "server identifier");
+        this.walletId = sjcl.codec.hex.fromBits(sjcl.misc.hkdf.expand(prk, "server identifier"));
     };
 })();
 

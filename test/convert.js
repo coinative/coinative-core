@@ -1,5 +1,6 @@
 var hex = {
   toBits: sjcl.codec.hex.toBits,
+  fromBits: sjcl.codec.hex.fromBits,
   toBytes: function (hex) {
     return  sjcl.codec.bytes.fromBits(this.toBits(hex));
   }
