@@ -1,8 +1,7 @@
 var chai = require('chai');
 var bitcoin = require('../dist/coinative-core.min');
 
-var sjcl = require('sjcl');
-global.sjcl = sjcl;
+global.sjcl = bitcoin.sjcl;
 
 var fs = require('fs');
 fs.readdirSync('./lib/sjcl-ext').forEach(function (file) {
