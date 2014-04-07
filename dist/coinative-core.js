@@ -1434,81 +1434,6 @@ sjcl.codec.base64url = {
     }
 };
 
-sjcl.codec.base58 = {
-    _chars: "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz",
-    fromBits: function(arr) {
-        if (sjcl.bitArray.bitLength(arr) > 0) {
-            var x = sjcl.bn.fromBits(arr), modulus = sjcl.bn.fromBits(arr), out = "", c = sjcl.codec.base58._chars;
-            while (x.greaterEquals(1)) {
-                var result = this._divmod58(x), x = result.q, charIndex = result.n.getLimb(0);
-                out = c[charIndex] + out;
-            }
-            var hex = sjcl.codec.hex.fromBits(arr), zeros = hex.match(/^0*/)[0].length, zeroBytes = Math.floor(zeros / 2);
-            for (var i = zeroBytes; i > 0; i--) {
-                out = "1" + out;
-            }
-            return out;
-        } else {
-            return "";
-        }
-    },
-    toBits: function(str) {
-        var powersOf58 = this._powersOf58(str.length);
-        var value = new sjcl.bn(), i, c = sjcl.codec.base58._chars, bitCount = 0;
-        for (i = 0; i < str.length; i++) {
-            var x = c.indexOf(str.charAt(i));
-            var pos = str.length - i - 1;
-            if (x < 0) {
-                throw new sjcl.exception.invalid("this isn't base58!");
-            }
-            var addend = new sjcl.bn(x).mul(powersOf58[pos]);
-            value.addM(addend);
-        }
-        if (str.length > 0) {
-            var trimmedValue = value.trim(), hexValue = trimmedValue == 0 ? "" : trimmedValue.toString().substr(2), zeros = str.match(/^1*/)[0].length, bitCount = hexValue.length * 4 + zeros * 8;
-            return trimmedValue.toBits(bitCount);
-        } else {
-            return "";
-        }
-    },
-    _divmod58: function(n) {
-        var result = {
-            q: new sjcl.bn(0),
-            n: new sjcl.bn(n)
-        };
-        var d = new sjcl.bn(58);
-        var powerOf58 = new sjcl.bn(1), powersOf58table = [ powerOf58 ];
-        while (result.n.greaterEquals(powerOf58)) {
-            powersOf58table.push(powerOf58);
-            powerOf58 = powerOf58.mul(d);
-        }
-        while (result.n.greaterEquals(d)) {
-            var i = powersOf58table.length - 1, addToQ = 1;
-            if (powersOf58table.length > 1) {
-                addToQ = powersOf58table[i - 1];
-            }
-            powerOf58 = powersOf58table[i];
-            while (powerOf58.greaterEquals(result.n.add(1))) {
-                i--;
-                powerOf58 = powersOf58table[i];
-                addToQ = powersOf58table[i - 1];
-            }
-            result.n.subM(powerOf58);
-            result.q.addM(addToQ);
-            result.n.normalize();
-        }
-        return result;
-    },
-    _powersOf58: function(maxPower) {
-        var out = [ new sjcl.bn(1) ];
-        for (var i = 1; i <= maxPower; i++) {
-            var result = new sjcl.bn(58).mul(out[i - 1]);
-            out.push(result);
-        }
-        return out;
-    }
-};
-
 sjcl.codec.bytes = {
     fromBits: function(arr) {
         var out = [], bl = sjcl.bitArray.bitLength(arr), i, tmp;
@@ -3829,7 +3754,6 @@ var bitcoin = {
     ECKey: {},
     HDKey: {},
     HDMasterKey: {},
-    WalletCredentials: {},
     Transaction: {},
     mnemonic: {}
 };
@@ -3844,38 +3768,35 @@ if (typeof module !== "undefined" && module.exports) {
 bitcoin.Address = {};
 
 (function() {
-    function sha256sha256(message) {
-        var hash = sjcl.codec.bytes.toBits(message);
-        return sjcl.codec.bytes.fromBits(sjcl.hash.sha256.hash(sjcl.hash.sha256.hash(hash)));
-    }
-    var Address = bitcoin.Address = function(hash, version) {
-        if ("string" == typeof hash) {
-            this.decodeString(hash);
-            return;
+    var b = sjcl.bitArray;
+    function parseAddress(address, _throw) {
+        if (typeof address !== "string") {
+            throw new Error("not a string");
         }
-        this.hash = hash;
-        this.version = version || Address.versions.bitcoin.production.pubKey;
-    };
-    Address.prototype.toString = function() {
-        var hash = this.hash.slice(0);
-        hash.unshift(this.version);
-        var checksum = sha256sha256(hash);
-        return bitcoin.base58.encode(hash.concat(checksum.slice(0, 4)));
-    };
-    Address.prototype.decodeString = function(string) {
-        var bytes = bitcoin.base58.decode(string);
-        var hash = bytes.slice(0, 21);
-        var checksum = sha256sha256(hash);
-        if (checksum[0] != bytes[21] || checksum[1] != bytes[22] || checksum[2] != bytes[23] || checksum[3] != bytes[24]) {
-            throw "Checksum validation failed!";
+        var bits = bitcoin.base58.decode(address);
+        if (b.bitLength(bits) !== 200) {
+            throw new Error("invalid length");
         }
-        var version = hash.shift();
+        var data = bitcoin.util.verifyChecksum(bits);
+        var version = b.extract(data, 0, 8);
         var versionInfo = Address.versionsReversed[version];
         if (!versionInfo) {
-            throw "Version " + version + " not supported!";
+            throw new Error("invalid version");
         }
+        return {
+            version: version,
+            hash: b.bitSlice(data, 8)
+        };
+    }
+    var Address = bitcoin.Address = function(hash, version) {
+        if (typeof hash === "string") {
+            var result = parseAddress(hash);
+            this.version = result.version;
+            this.hash = result.hash;
+            return;
+        }
+        this.version = version || Address.versions.livenet.pubKey;
         this.hash = hash;
-        this.version = version;
     };
     Address.prototype.isP2SH = function() {
         var versionInfo = Address.versionsReversed[this.version];
@@ -3885,124 +3806,120 @@ bitcoin.Address = {};
         var versionInfo = Address.versionsReversed[this.version];
         return versionInfo.type == "pubKey";
     };
+    Address.prototype.toString = function() {
+        var hash = b.concat([ b.partial(8, this.version) ], this.hash);
+        var checksum = bitcoin.util.sha256dCheck(hash);
+        return bitcoin.base58.encode(b.concat(hash, checksum));
+    };
     Address.isValid = function(address) {
-        var bytes = bitcoin.base58.decode(address);
-        var hash = bytes.slice(0, 21);
-        var checksum = sha256sha256(hash);
-        if (checksum[0] != bytes[21] || checksum[1] != bytes[22] || checksum[2] != bytes[23] || checksum[3] != bytes[24]) {
+        try {
+            parseAddress(address);
+            return true;
+        } catch (e) {
             return false;
         }
-        return true;
     };
     Address.versions = {
-        bitcoin: {
-            testnet: {
-                p2sh: 196,
-                pubKey: 111
-            },
-            production: {
-                p2sh: 5,
-                pubKey: 0
-            }
+        testnet: {
+            p2sh: 196,
+            pubKey: 111
+        },
+        livenet: {
+            p2sh: 5,
+            pubKey: 0
         }
     };
     Address.versionsReversed = [];
-    for (var currency in Address.versions) {
-        var networks = Address.versions[currency];
-        for (var network in networks) {
-            var keys = Address.versions[currency][network];
-            for (var key in keys) {
-                var keyValue = Address.versions[currency][network][key];
-                Address.versionsReversed[keyValue] = {
-                    currency: currency,
-                    network: network,
-                    type: key
-                };
-            }
+    for (var network in Address.versions) {
+        var types = Address.versions[network];
+        for (var type in types) {
+            var version = types[type];
+            Address.versionsReversed[version] = {
+                network: network,
+                type: type
+            };
         }
     }
 })();
 
 "use strict";
 
-bitcoin.base58 = {};
-
 (function() {
-    function toByteArrayUnsigned(bn) {
-        var ba = bn.abs().toByteArray();
-        if (!ba.length) {
-            return ba;
+    var b = sjcl.bitArray;
+    function toBitArray(bn) {
+        var bytes = bn.abs().toByteArray();
+        if (!bytes.length) {
+            return bytes;
         }
-        if (ba[0] === 0) {
-            ba = ba.slice(1);
+        if (bytes[0] === 0) {
+            bytes = bytes.slice(1);
         }
-        for (var i = 0; i < ba.length; ++i) {
-            ba[i] = ba[i] < 0 ? ba[i] + 256 : ba[i];
+        for (var i = 0; i < bytes.length; i++) {
+            bytes[i] = bytes[i] < 0 ? bytes[i] + 256 : bytes[i];
         }
-        return ba;
+        return sjcl.codec.bytes.toBits(bytes);
     }
-    function fromByteArrayUnsigned(ba) {
-        if (!ba.length) {
+    function fromBitArray(bits) {
+        var bytes = sjcl.codec.bytes.fromBits(bits);
+        if (!bytes.length) {
             return new BigInteger(0);
-        } else if (ba[0] & 128) {
-            return new BigInteger([ 0 ].concat(ba));
+        } else if (bytes[0] & 128) {
+            return new BigInteger([ 0 ].concat(bytes));
         } else {
-            return new BigInteger(ba);
+            return new BigInteger(bytes);
         }
     }
     var alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
     var base = new BigInteger(null);
     base.fromInt(58);
     var positions = {};
-    for (var i = 0; i < alphabet.length; ++i) {
+    for (var i = 0; i < alphabet.length; i++) {
         positions[alphabet[i]] = i;
     }
-    var base58 = bitcoin.base58;
-    base58.encode = function(input) {
-        var bi = fromByteArrayUnsigned(input);
-        var chars = [];
-        while (bi.compareTo(base) >= 0) {
-            var mod = bi.mod(base);
-            chars.push(alphabet[mod.intValue()]);
-            bi = bi.subtract(mod).divide(base);
-        }
-        chars.push(alphabet[bi.intValue()]);
-        for (var i = 0; i < input.length; i++) {
-            if (input[i] === 0) {
-                chars.push(alphabet[0]);
-            } else {
-                break;
+    bitcoin.base58 = {
+        encode: function(input) {
+            var bi = fromBitArray(input);
+            var chars = [];
+            while (bi.compareTo(base) >= 0) {
+                var mod = bi.mod(base);
+                chars.push(alphabet[mod.intValue()]);
+                bi = bi.subtract(mod).divide(base);
             }
-        }
-        return chars.reverse().join("");
-    };
-    base58.decode = function(input) {
-        var base = new BigInteger(null);
-        base.fromInt(58);
-        var length = input.length;
-        var num = BigInteger.ZERO;
-        var leadingZero = 0;
-        var seenOther = false;
-        for (var i = 0; i < length; ++i) {
-            var alphChar = input[i];
-            var p = positions[alphChar];
-            if (p === undefined) {
-                throw new Error("invalid base58 string: " + input);
+            chars.push(alphabet[bi.intValue()]);
+            for (var i = 0; i < input.length; i++) {
+                if (b.extract(input, i * 8, (i + 1) * 8) === 0) {
+                    chars.push(alphabet[0]);
+                } else {
+                    break;
+                }
             }
-            var pNum = new BigInteger(null);
-            pNum.fromInt(p);
-            num = num.multiply(base).add(pNum);
-            if (alphChar === "1" && !seenOther) {
-                ++leadingZero;
-            } else {
-                seenOther = true;
+            return chars.reverse().join("");
+        },
+        decode: function(input) {
+            var base = new BigInteger(null);
+            base.fromInt(58);
+            var length = input.length;
+            var num = BigInteger.ZERO;
+            for (var i = 0; i < length; i++) {
+                var alphChar = input[i];
+                var p = positions[alphChar];
+                if (p === undefined) {
+                    throw new Error("invalid base58 string: " + input);
+                }
+                var pNum = new BigInteger(null);
+                pNum.fromInt(p);
+                num = num.multiply(base).add(pNum);
             }
+            var bits = toBitArray(num);
+            for (var i = 0; i < length; i++) {
+                if (input[i] === "1") {
+                    bits = b.concat([ b.partial(8, 0) ], bits);
+                } else {
+                    break;
+                }
+            }
+            return bits;
         }
-        var bytes = toByteArrayUnsigned(num);
-        while (leadingZero-- > 0) {
-            bytes.unshift(0);
-        }
-        return bytes;
     };
 })();
 
@@ -4015,14 +3932,14 @@ bitcoin.config = {};
         versions: {
             bitcoin: {
                 testnet: {
-                    xpubKey: "0x043587CF",
-                    xprvKey: "0x04358394",
+                    xpubKey: 70617039,
+                    xprvKey: 70615956,
                     p2sh: 196,
                     pubKey: 111
                 },
                 production: {
-                    xpubKey: "0x0488B21E",
-                    xprvKey: "0x0488ADE4",
+                    xpubKey: 76067358,
+                    xprvKey: 76066276,
                     p2sh: 5,
                     pubKey: 0
                 }
@@ -4033,13 +3950,13 @@ bitcoin.config = {};
     for (var currency in config.versions) {
         var networks = config.versions[currency];
         for (var network in networks) {
-            var keys = config.versions[currency][network];
+            var keys = networks[network];
             for (var key in keys) {
-                var keyValue = config.versions[currency][network][key];
+                var keyValue = keys[key];
                 config.versionsReversed[keyValue] = {
                     currency: currency,
                     network: network,
-                    isPrivate: key == "private"
+                    isPrivate: keyValue === 70615956 || keyValue === 76066276
                 };
             }
         }
@@ -4051,36 +3968,43 @@ bitcoin.config = {};
 bitcoin.ECKey = {};
 
 (function() {
-    var _0x00 = sjcl.codec.bytes.toBits([ 0 ]);
-    var _0x02 = sjcl.codec.bytes.toBits([ 2 ]);
-    var _0x03 = sjcl.codec.bytes.toBits([ 3 ]);
-    var _0x04 = sjcl.codec.bytes.toBits([ 4 ]);
-    var Q = "3fffffffffffffffffffffffffffffffffffffffffffffffffffffffbfffff0c";
-    var ECKey = bitcoin.ECKey = function(prv, opts) {
-        this._curve = sjcl.ecc.curves.k256;
+    var b = sjcl.bitArray;
+    var ecc = sjcl.ecc;
+    var _0x00 = [ b.partial(8, 0) ];
+    var _0x02 = [ b.partial(8, 2) ];
+    var _0x03 = [ b.partial(8, 3) ];
+    var _0x04 = [ b.partial(8, 4) ];
+    var Q = new sjcl.bn("3fffffffffffffffffffffffffffffffffffffffffffffffffffffffbfffff0c");
+    var ECKey = bitcoin.ECKey = function(prv, pub) {
+        this._curve = ecc.curves.k256;
+        if (!prv && !pub) {
+            throw new Error("no keys");
+        }
         if (prv) {
-            this.keyPair = sjcl.ecc.ecdsa.generateKeys(this._curve, 0, sjcl.bn.fromBits(prv));
+            this.keyPair = ecc.ecdsa.generateKeys(this._curve, 0, sjcl.bn.fromBits(prv));
             this.prv = this.keyPair.sec.get();
+        }
+        if (pub) {
+            this.pub = this._pubToECPoint(pub);
         }
     };
     ECKey.prototype._decompressY = function(odd_even, x) {
         var ySquared = this._curve.b.add(x.mul(this._curve.a.add(x.square())));
-        var q = sjcl.bn.fromBits(sjcl.codec.hex.toBits(Q));
-        var y = ySquared.powermod(q, this._curve.field.modulus);
-        if (y.mod(2).equals(0) !== sjcl.bitArray.equal(odd_even, _0x02)) {
+        var y = ySquared.powermod(Q, this._curve.field.modulus);
+        if (y.mod(2).equals(0) !== b.equal(odd_even, _0x02)) {
             y = this._curve.field.modulus.sub(y);
         }
-        return sjcl.ecc.curves.k256.fromBits(new sjcl.ecc.point(this._curve, x, y).toBits());
+        return ecc.curves.k256.fromBits(new ecc.point(this._curve, x, y).toBits());
     };
     ECKey.prototype._pubToECPoint = function(key) {
-        var xBits = sjcl.bitArray.concat(_0x00, sjcl.bitArray.bitSlice(key, 8, 256 + 8));
-        var yBits = sjcl.bitArray.concat(_0x00, sjcl.bitArray.bitSlice(key, 256 + 8));
+        var xBits = b.concat(_0x00, b.bitSlice(key, 8, 256 + 8));
+        var yBits = b.concat(_0x00, b.bitSlice(key, 256 + 8));
         var x = sjcl.bn.fromBits(xBits);
         var y = sjcl.bn.fromBits(yBits);
         if (y.equals(0) && this._curve.field.modulus.mod(new sjcl.bn(4)).equals(new sjcl.bn(3))) {
-            return this._decompressY(sjcl.bitArray.bitSlice(key, 0, 8), x);
+            return this._decompressY(b.bitSlice(key, 0, 8), x);
         }
-        return new sjcl.ecc.point(this._curve, x, y);
+        return new ecc.point(this._curve, x, y);
     };
     ECKey.prototype._encodePubKey = function(point, compressed) {
         var enc = point.x.toBits();
@@ -4088,22 +4012,19 @@ bitcoin.ECKey = {};
         var yIsEven = sjcl.bn.fromBits(y).mod(2).equals(0);
         if (compressed) {
             if (yIsEven) {
-                enc = sjcl.bitArray.concat(_0x02, enc);
+                enc = b.concat(_0x02, enc);
             } else {
-                enc = sjcl.bitArray.concat(_0x03, enc);
+                enc = b.concat(_0x03, enc);
             }
         } else {
-            enc = sjcl.bitArray.concat(_0x04, enc);
-            enc = sjcl.bitArray.concat(enc, y);
+            enc = b.concat(_0x04, enc);
+            enc = b.concat(enc, y);
         }
         return enc;
     };
     ECKey.prototype.setCompressed = function(compressed) {
-        this.pubKeyHash = undefined;
+        delete this.pubKeyHash;
         this.compressed = !!compressed;
-    };
-    ECKey.prototype.setPub = function(pub) {
-        this.pub = this._pubToECPoint(pub);
     };
     ECKey.prototype.getPubPoint = function() {
         if (this.pub) {
@@ -4116,7 +4037,7 @@ bitcoin.ECKey = {};
         return this._encodePubKey(this.getPubPoint(), this.compressed);
     };
     ECKey.prototype.isValidPub = function() {
-        var point = sjcl.ecc.curves.k256.fromBits(this.getPubPoint().toBits());
+        var point = ecc.curves.k256.fromBits(this.getPubPoint().toBits());
         return point.isValid();
     };
     ECKey.prototype.getPubKeyHash = function() {
@@ -4124,7 +4045,7 @@ bitcoin.ECKey = {};
         return this.pubKeyHash = bitcoin.util.sha256ripe160(this.getPub());
     };
     ECKey.prototype.getBitcoinAddress = function() {
-        return new bitcoin.Address(sjcl.codec.bytes.fromBits(this.getPubKeyHash()));
+        return new bitcoin.Address(this.getPubKeyHash());
     };
     ECKey.prototype.sign = function(hash) {
         if (!this.keyPair) {
@@ -4137,59 +4058,75 @@ bitcoin.ECKey = {};
     };
 })();
 
-bitcoin.ExtendedKey = {};
-
-(function() {
-    var ExtendedKey = bitcoin.ExtendedKey = function(xKey) {
-        this.deserialize(xKey);
-        if (!this.isValid()) throw "checksum failed.";
-    };
-    ExtendedKey.prototype.isValid = function() {
-        return sjcl.bitArray.equal(sjcl.bitArray.bitSlice(this.keyHash, 0, 32), this.checksum);
-    };
-    ExtendedKey.prototype.deserialize = function(xKey) {
-        var xPubBytes = bitcoin.base58.decode(xKey);
-        var keyBytes = xPubBytes.slice(0, 78);
-        this.key = sjcl.codec.bytes.toBits(keyBytes);
-        this.checksum = sjcl.codec.bytes.toBits(xPubBytes.slice(78, 82));
-        this.keyHash = sjcl.codec.bytes.toBits(bitcoin.util.sha256sha256(keyBytes));
-    };
-    ExtendedKey.isValid = function(xKey) {
-        var xPubBytes = bitcoin.base58.decode(xKey);
-        var keyBytes = xPubBytes.slice(0, 78);
-        var checksumBytes = xPubBytes.slice(78, 82);
-        var keyHash = bitcoin.util.sha256sha256(keyBytes);
-        return keyHash[0] === checksumBytes[0] && keyHash[1] === checksumBytes[1] && keyHash[2] === checksumBytes[2] && keyHash[3] === checksumBytes[3];
-    };
-})();
-
 "use strict";
 
 bitcoin.HDKey = {};
 
 (function() {
+    var b = sjcl.bitArray;
+    function deriveFromMasterSeed(seed) {
+        var key = sjcl.codec.utf8String.toBits("Bitcoin seed");
+        var masterSeed = new sjcl.misc.hmac(key, sjcl.hash.sha512).encrypt(seed);
+        return {
+            prv: b.bitSlice(masterSeed, 0, 256),
+            chain: b.bitSlice(masterSeed, 256)
+        };
+    }
+    function parseExtendedKey(xkey) {
+        var bits = bitcoin.base58.decode(xkey);
+        if (b.bitLength(bits) !== 656) {
+            throw new Error("invalid data");
+        }
+        var data = bitcoin.util.verifyChecksum(bits);
+        var versionBits = b.extract(data, 0, 32);
+        var version = bitcoin.config.versionsReversed[versionBits];
+        if (!version) {
+            throw new Error("invalid version");
+        }
+        var opts = {
+            version: bitcoin.config.versions.bitcoin[version.network],
+            depth: b.extract(data, 32, 8),
+            parent: b.bitSlice(data, 40, 72),
+            child: b.extract(data, 72, 32),
+            chain: b.bitSlice(data, 104, 360)
+        };
+        if (version.isPrivate) {
+            opts.prv = b.bitSlice(data, 368);
+        } else {
+            opts.pub = b.bitSlice(data, 360);
+        }
+        return opts;
+    }
     var HDKey = bitcoin.HDKey = function(opts) {
-        if (opts && opts.chain && sjcl.bitArray.bitLength(opts.chain) != 256) throw new Error("invalid chain code");
-        if (!opts.pub && !opts.prv) throw new Error("no keys defined");
+        if (!opts) {
+            throw new Error("no opts");
+        }
+        if (typeof opts === "string") {
+            return new HDKey(parseExtendedKey(opts));
+        }
+        if (Array.isArray(opts)) {
+            return new HDKey(deriveFromMasterSeed(opts));
+        }
+        if (!opts.chain || sjcl.bitArray.bitLength(opts.chain) !== 256) {
+            throw new Error("invalid chain code");
+        }
+        if (!opts.pub && !opts.prv) {
+            throw new Error("no keys defined");
+        }
         this.chain = opts.chain;
-        this._hmacChain = new sjcl.misc.hmac(this.chain, sjcl.hash.sha512);
+        this._hmacChain = new sjcl.misc.hmac(opts.chain, sjcl.hash.sha512);
         this.version = opts.version || bitcoin.config.versions.bitcoin.production;
         if (opts.prv) {
             this.prv = opts.prv;
         }
-        this.ecKey = new bitcoin.ECKey(this.prv, {
-            version: bitcoin.config.versionsReversed[this.version["xpubKey"]]
-        });
-        this.ecKey.setCompressed(opts.compressed != undefined ? opts.compressed : true);
-        if (opts.pub) {
-            this.ecKey.setPub(opts.pub);
-        }
+        this.ecKey = new bitcoin.ECKey(opts.prv, opts.pub);
+        this.ecKey.setCompressed(typeof opts.compressed === "boolean" ? opts.compressed : true);
         this.pub = this.ecKey.getPub();
         this.id = this.ecKey.getPubKeyHash();
         this.address = this.ecKey.getBitcoinAddress().toString();
         this.fpr = sjcl.bitArray.bitSlice(this.id, 0, 32);
         this.depth = opts.depth || 0;
-        this.parent = opts.parent || sjcl.codec.bytes.toBits([ 0, 0, 0, 0 ]);
+        this.parent = opts.parent || [ 0 ];
         this.child = opts.child || 0;
     };
     HDKey.prototype.setCompressedAddresses = function(compressed) {
@@ -4250,71 +4187,47 @@ bitcoin.HDKey = {};
     HDKey.prototype.serialize = function() {
         var serialized = {};
         var pub = this._serializePublicKey();
-        var pubChecksum = bitcoin.util.sha256sha256(pub);
         serialized.pub = {
-            hex: sjcl.codec.hex.fromBits(sjcl.codec.bytes.toBits(pub)),
-            b58: bitcoin.base58.encode(pub.concat(pubChecksum.slice(0, 4)))
+            hex: sjcl.codec.hex.fromBits(pub),
+            b58: bitcoin.base58.encode(b.concat(pub, bitcoin.util.sha256dCheck(pub)))
         };
         if (this.prv) {
             var prv = this._serializePrivateKey();
-            var prvChecksum = bitcoin.util.sha256sha256(prv);
             serialized.prv = {
-                hex: sjcl.codec.hex.fromBits(sjcl.codec.bytes.toBits(prv)),
-                b58: bitcoin.base58.encode(prv.concat(prvChecksum.slice(0, 4)))
+                hex: sjcl.codec.hex.fromBits(prv),
+                b58: bitcoin.base58.encode(b.concat(prv, bitcoin.util.sha256dCheck(prv)))
             };
         }
         return serialized;
     };
     HDKey.prototype._serializePublicKey = function() {
-        var pub = sjcl.codec.bytes.fromBits(bitcoin.util.intToBits(this.version["xpubKey"])).concat(sjcl.codec.bytes.fromBits(bitcoin.util.intToBits(this.depth))[3]).concat(sjcl.codec.bytes.fromBits(this.parent)).concat(sjcl.codec.bytes.fromBits(bitcoin.util.intToBits(this.child))).concat(sjcl.codec.bytes.fromBits(this.chain)).concat(sjcl.codec.bytes.fromBits(this.pub));
+        var pub = [ this.version["xpubKey"] ];
+        pub = b.concat(pub, [ b.partial(8, this.depth) ]);
+        pub = b.concat(pub, this.parent);
+        pub = b.concat(pub, [ this.child ]);
+        pub = b.concat(pub, this.chain);
+        pub = b.concat(pub, this.pub);
         return pub;
-    };
-    HDKey.deserializeKey = function(extKey) {
-        if (extKey instanceof bitcoin.ExtendedKey) {
-            extKey = extKey.key;
-        }
-        if (sjcl.bitArray.bitLength(extKey) != 624) {
-            throw new Error("Not enough data");
-        }
-        var keyVersion = sjcl.bitArray.bitSlice(extKey, 0, 32);
-        var version = "0x" + sjcl.codec.hex.fromBits(keyVersion).toString().toUpperCase();
-        var versionInfo = bitcoin.config.versionsReversed[version];
-        if (!versionInfo) {
-            throw new Error("No version found. Invalid Key");
-        }
-        var opts = {
-            version: bitcoin.config.versions[versionInfo.currency][versionInfo.network],
-            depth: parseInt(sjcl.codec.hex.fromBits(sjcl.bitArray.bitSlice(extKey, 32, 40))),
-            parent: sjcl.bitArray.bitSlice(extKey, 40, 72),
-            child: parseInt(sjcl.codec.hex.fromBits(sjcl.bitArray.bitSlice(extKey, 72, 104))),
-            chain: sjcl.bitArray.bitSlice(extKey, 104, 360)
-        };
-        opts[versionInfo.isPrivate ? "prv" : "pub"] = sjcl.bitArray.bitSlice(extKey, 360, 624);
-        return new HDKey(opts);
     };
     HDKey.prototype._serializePrivateKey = function() {
         if (!this.prv) {
             throw new Error("Cannot serialize private key without a private key");
         }
-        var prv = sjcl.codec.bytes.fromBits(bitcoin.util.intToBits(this.version["xprvKey"])).concat(sjcl.codec.bytes.fromBits(bitcoin.util.intToBits(this.depth))[3]).concat(sjcl.codec.bytes.fromBits(this.parent)).concat(sjcl.codec.bytes.fromBits(bitcoin.util.intToBits(this.child))).concat(sjcl.codec.bytes.fromBits(this.chain)).concat([ 0 ].concat(sjcl.codec.bytes.fromBits(this.prv)));
+        var prv = [ this.version["xprvKey"] ];
+        prv = b.concat(prv, [ b.partial(8, this.depth) ]);
+        prv = b.concat(prv, this.parent);
+        prv = b.concat(prv, [ this.child ]);
+        prv = b.concat(prv, this.chain);
+        prv = b.concat(prv, b.concat([ b.partial(8, 0) ], this.prv));
         return prv;
     };
-})();
-
-"use strict";
-
-bitcoin.HDMasterKey = {};
-
-(function() {
-    var SEED = "Bitcoin seed";
-    var HDMasterKey = bitcoin.HDMasterKey = function(seed) {
-        var seedBits = seed ? sjcl.codec.hex.toBits(seed) : sjcl.random.randomWords(8);
-        var masterSeed = new sjcl.misc.hmac(sjcl.codec.utf8String.toBits(SEED), sjcl.hash.sha512).encrypt(seedBits);
-        var masterKey = new bitcoin.HDKey({
-            prv: sjcl.bitArray.bitSlice(masterSeed, 0, 256),
-            chain: sjcl.bitArray.bitSlice(masterSeed, 256)
-        });
-        return masterKey;
+    HDKey.isValid = function(xkey) {
+        try {
+            parseExtendedKey(xkey);
+            return true;
+        } catch (e) {
+            return false;
+        }
     };
 })();
 
@@ -4416,8 +4329,8 @@ bitcoin.MultiSigKey = {};
     };
     MultiSigKey.prototype.getAddress = function() {
         var redempScript = sjcl.codec.bytes.toBits(this.redeemScript.buffer);
-        var address = sjcl.codec.bytes.fromBits(bitcoin.util.sha256ripe160(redempScript));
-        return new bitcoin.Address(address, bitcoin.Address.versions.bitcoin.production.p2sh);
+        var address = bitcoin.util.sha256ripe160(redempScript);
+        return new bitcoin.Address(address, bitcoin.Address.versions.livenet.p2sh);
     };
     MultiSigKey.prototype.derivePublic = function(i) {
         var derivedKeys = [];
@@ -5170,11 +5083,26 @@ bitcoin.util = {};
     util.intToBits = function(i) {
         return sjcl.codec.bytes.toBits([ i >>> 24 & 255, i >>> 16 & 255, i >>> 8 & 255, i & 255 ]);
     };
-    util.sha256sha256 = function(message) {
-        return sjcl.codec.bytes.fromBits(sjcl.hash.sha256.hash(sjcl.hash.sha256.hash(sjcl.codec.bytes.toBits(message))));
+    var b = sjcl.bitArray;
+    var sha256 = sjcl.hash.sha256.hash;
+    var ripemd160 = sjcl.hash.ripemd160.hash;
+    util.sha256d = function(data) {
+        return sha256(sha256(data));
     };
-    util.sha256ripe160 = function(pubKey) {
-        return sjcl.hash.ripemd160.hash(sjcl.hash.sha256.hash(pubKey));
+    util.sha256dCheck = function(data) {
+        return b.bitSlice(util.sha256d(data), 0, 32);
+    };
+    util.sha256ripe160 = function(data) {
+        return ripemd160(sha256(data));
+    };
+    util.verifyChecksum = function(bits) {
+        var len = b.bitLength(bits);
+        var data = b.bitSlice(bits, 0, len - 32);
+        var checksum = b.bitSlice(bits, len - 32);
+        if (!b.equal(util.sha256dCheck(data), checksum)) {
+            throw new Error("invalid checksum");
+        }
+        return data;
     };
     util.wordsToBytes = function(words) {
         for (var bytes = [], b = 0; b < words.length * 32; b += 8) bytes.push(words[b >>> 5] >>> 24 - b % 32 & 255);
@@ -5190,61 +5118,5 @@ bitcoin.util = {};
         } else {
             return [ 255 ].concat(this.wordsToBytes([ i >>> 32, i ]));
         }
-    };
-})();
-
-"use strict";
-
-bitcoin.WalletCredentials = {};
-
-(function() {
-    var defaults = {
-        iterations: 2e3
-    };
-    var WalletCredentials = bitcoin.WalletCredentials = function(id, password, opts) {
-        opts = opts || defaults;
-        this.id = id;
-        var prk = sjcl.misc.pbkdf2(password, this.id, opts.iterations, 256);
-        Object.defineProperty(this, "encryptionKey", {
-            enumerable: false,
-            value: sjcl.codec.hex.fromBits(sjcl.misc.hkdf.expand(prk, "encryption key"))
-        });
-        this.walletId = sjcl.codec.hex.fromBits(sjcl.misc.hkdf.expand(prk, "server identifier"));
-    };
-})();
-
-"use strict";
-
-bitcoin.Wallet = {};
-
-(function() {
-    var Account = function(HDKey) {
-        this.addresses = [];
-        this.internalAddresses = [];
-        this.HDKey = HDKey.derivePublic(0);
-        this.HDKeyInternal = HDKey.derivePublic(1);
-    };
-    Account.prototype.getNextInternalAddress = function() {
-        var hdKey = this.HDKeyInternal.derivePublic(this.internalAddresses.length);
-        this.internalAddresses.push(hdKey.address);
-        return hdKey;
-    };
-    Account.createTx = function(unspent, amount, address, fee) {};
-    var Wallet = bitcoin.Wallet = function(masterKey) {
-        this.masterKey = masterKey;
-        this.accounts = [];
-    };
-    Wallet.prototype.createStandardAccount = function() {
-        var account = new Account(this.masterKey.derivePrivate(this.accounts.length + 2147483648));
-        this.accounts.push(account);
-    };
-    Wallet.prototype.createMultiSigAccount = function(otherParties, reqSigs, unsorted) {
-        var multiSigKey = new bitcoin.MultiSigKey([ this.masterKey.derivePrivate(this.accounts.length + 2147483648) ].concat(otherParties), reqSigs, unsorted);
-        var account = new Account(multiSigKey);
-        this.accounts.push(account);
-    };
-    Wallet.init = function() {
-        var masterKey = new bitcoin.HDMasterKey();
-        return new Wallet(masterKey);
     };
 })();

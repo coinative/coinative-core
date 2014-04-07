@@ -8,6 +8,7 @@ var hex = {
 
 var bytes = {
   toBits: sjcl.codec.bytes.toBits,
+  fromBits: sjcl.codec.bytes.fromBits,
   toHex: function (bytes) {
     return sjcl.codec.hex.fromBits(this.toBits(bytes));
   }
