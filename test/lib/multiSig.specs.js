@@ -15,7 +15,7 @@ describe('MultiSigKey', function () {
     });
   });
 
-  describe('Sorted Public Keys', function () {
+  describe('Sorted HDKeys (public)', function () {
     var multiSigKey = new bitcoin.MultiSigKey([
       new bitcoin.HDKey({
         compressed: false,
@@ -41,7 +41,7 @@ describe('MultiSigKey', function () {
     });
   });
 
-  describe('Uncompressed public keys', function () {
+  describe('Uncompressed HDKeys (public)', function () {
     // bitcoind addmultisigaddress 2 '["041558d6cc3c80504aab547c199161a45bfa726caefa70938a89d3c7cb5ad8c245b01e930bc6c9d489492be16a1c89b13ec0ba36345cf8f9813ff8457d7201d208",
     // "041086f00a358a099eb92c9ae7c3a48f0d37ae58c3952edc87a293c9c449e438f993dc90bb34e827040cc2e8ee42d1cc713ed3d99aa4a74bfd859a05278bf64954"]'
     it('2 of 2, unsorted', function () {
@@ -63,7 +63,7 @@ describe('MultiSigKey', function () {
     // "041558d6cc3c80504aab547c199161a45bfa726caefa70938a89d3c7cb5ad8c245b01e930bc6c9d489492be16a1c89b13ec0ba36345cf8f9813ff8457d7201d208"]'
     it('2 of 2, sorted', function () {
       var multiSigKey = new bitcoin.MultiSigKey([
-        new bitcoin.HDKey({ 
+        new bitcoin.HDKey({
           compressed: false,
           chain: hex.toBits('9452b549be8cea3ecb7a84bec10dcfd94afe4d129ebfd3b3cb58eedf394ed271'),
           pub: hex.toBits('041558d6cc3c80504aab547c199161a45bfa726caefa70938a89d3c7cb5ad8c245b01e930bc6c9d489492be16a1c89b13ec0ba36345cf8f9813ff8457d7201d208')
@@ -110,7 +110,7 @@ describe('MultiSigKey', function () {
     });
   });
 
-  describe('Compressed public keys', function () {
+  describe('Compressed HDKeys (public)', function () {
     it('2 of 3, sorted', function () {
       var multiSigKey = new bitcoin.MultiSigKey([
         new bitcoin.HDKey({
@@ -155,6 +155,36 @@ describe('MultiSigKey', function () {
       expect(multiSigKey.getAddress().toString()).equal('34LJYmuLR6tCYA3pzskyP9nDPXF7mUCTdQ');
 
     });
+  });
+
+  describe('Public Key Derivation', function () {
+    var multiSigKey = new bitcoin.MultiSigKey([
+      new bitcoin.HDKey({
+        chain: hex.toBits('9452b549be8cea3ecb7a84bec10dcfd94afe4d129ebfd3b3cb58eedf394ed271'),
+        pub: hex.toBits('03d728ad6757d4784effea04d47baafa216cf474866c2d4dc99b1e8e3eb936e730')
+      }),
+      new bitcoin.HDKey({
+        chain: hex.toBits('9452b549be8cea3ecb7a84bec10dcfd94afe4d129ebfd3b3cb58eedf394ed271'),
+        pub: hex.toBits('02d83bba35a8022c247b645eed6f81ac41b7c1580de550e7e82c75ad63ee9ac2fd')
+      }),
+      new bitcoin.HDKey({
+        chain: hex.toBits('9452b549be8cea3ecb7a84bec10dcfd94afe4d129ebfd3b3cb58eedf394ed271'),
+        pub: hex.toBits('03aeb681df5ac19e449a872b9e9347f1db5a0394d2ec5caf2a9c143f86e232b0d9')
+      }),
+    ], 2, true);
+
+    it('can derive new multiSigKey key with public key derivation (< 0x80000000)', function () {
+      var childMultiSigKey = multiSigKey.derivePublic(1);
+      expect(bytes.toHex(childMultiSigKey.hdKeys[0].parent)).equal(bytes.toHex(multiSigKey.hdKeys[0].fpr));
+      expect(bytes.toHex(childMultiSigKey.hdKeys[1].parent)).equal(bytes.toHex(multiSigKey.hdKeys[1].fpr));
+      expect(bytes.toHex(childMultiSigKey.hdKeys[2].parent)).equal(bytes.toHex(multiSigKey.hdKeys[2].fpr));
+    });
+
+
+    it('should throw error on public key by private dervivation (> 0x80000000)', function () {
+      expect(function () { multiSigKey.derivePublic(1 + 0x80000000) }).to.throw('Cannot perform private derivation using the public child key derivation function');
+    });
+
   });
 
   describe('regression tests', function () {
