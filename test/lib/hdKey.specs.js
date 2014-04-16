@@ -144,4 +144,116 @@ describe('HDKey', function () {
     });
 
   });
+
+  describe('testnet (chain+pub)', function () {
+    var hdKey = new bitcoin.HDKey({
+      chain: hex.toBits('9452b549be8cea3ecb7a84bec10dcfd94afe4d129ebfd3b3cb58eedf394ed271'),
+      pub: hex.toBits('048819FA4D69BCEB1BCBF0EC9E605FED325D63472EF703E31290B9B278DA3FC88C994DB69A4B2EEB1EE93664462B2EAD0709A8D3BF46DA9C7081A17B8EF7468882'),
+      version: bitcoin.config.versions.bitcoin.testnet
+    });
+
+    var serialized = hdKey.serialize();
+    var xPubKey = hex.toBytes(serialized.pub.hex);
+
+    it('version should be set to testnet', function () {
+      expect(hdKey.version).eql({
+        'xpubKey': 0x043587cf,
+        'xprvKey': 0x04358394,
+        'p2sh': 196,
+        'pubKey': 111
+      });
+    });
+
+    it('should default to compressed keys', function () {
+      expect(hdKey.ecKey.compressed).to.be.true;
+    });
+
+    it('should generate valid addresses', function () {
+      expect(hdKey.address).equal('mjYBku4aaSgzG3FXZb9MmDRTDSuCXM3auM');
+      hdKey.setCompressedAddresses(false);
+      expect(hdKey.address).equal('n1JcCLKDobgC86SNePt7QqnzydApRbUeg4');
+    });
+
+    it('should throw error on private key dervivation', function () {
+      expect(function () { hdKey.derivePrivate(1) }).to.throw('Cannot perform private derivation without a private key');
+    });
+
+    it('can derive new public key with public key derivation (< 0x80000000)', function () {
+      var childHdKey = hdKey.derivePublic(1);
+      expect(bytes.toHex(childHdKey.parent)).equal(bytes.toHex(hdKey.fpr))
+    });
+
+    it('should throw error on public key by private dervivation (> 0x80000000)', function () {
+      expect(function () { hdKey.derivePublic(1 + 0x80000000) }).to.throw('Cannot perform private derivation using the public child key derivation function');
+    });
+
+    it('should serialize pubkey only', function () {
+      expect(serialized).to.have.property('pub');
+      expect(serialized).to.not.have.property('prv');
+    });
+
+    it('serialized hex xpubkey should conform to BIP32 spec', function () {
+      expect(xPubKey.slice(0, 4)).eql(hex.toBytes('043587cf')); // 4 byte: version bytes (mainnet: 0x0488B21E public, 0x0488ADE4 private; testnet: 0x043587CF public, 0x04358394 private)
+      expect(xPubKey.slice(4, 5)).eql(hex.toBytes('00')) // 1 byte: depth: 0x00 for master nodes, 0x01 for level-1 descendants
+      expect(xPubKey.slice(5, 9)).eql(hex.toBytes('00000000'));
+      expect(xPubKey.slice(9, 13)).eql(hex.toBytes('00000000')); // child index
+      expect(xPubKey.slice(13, 45)).eql(hex.toBytes('9452b549be8cea3ecb7a84bec10dcfd94afe4d129ebfd3b3cb58eedf394ed271')); //chain codes
+      expect(xPubKey.slice(45, 78)).eql(hex.toBytes('028819fa4d69bceb1bcbf0ec9e605fed325d63472ef703e31290b9b278da3fc88c')) // compressed pub key
+    });
+  });
+
+  describe('testnet (tpubkey)', function () {
+    var hdKey = bitcoin.HDKey('tpubD6NzVbkrYhZ4XpGe4x9QtGpMstk7H6AuHS2MvoUuQm8qvkppT6xEyB669TJRiMq1hTiFCmVqtosYdvYRWjaL9H2aeYMMi6hvEShHjBATKa8');
+
+    var serialized = hdKey.serialize();
+    var xPubKey = hex.toBytes(serialized.pub.hex);
+
+    it('version should be set to testnet', function () {
+      expect(hdKey.version).eql({
+        'xpubKey': 0x043587cf,
+        'xprvKey': 0x04358394,
+        'p2sh': 196,
+        'pubKey': 111
+      });
+    });
+
+    it('should default to compressed keys', function () {
+      expect(hdKey.ecKey.compressed).to.be.true;
+    });
+
+    it('should generate valid addresses', function () {
+      expect(hdKey.address).equal('mypmLG7CkR589AvDw7C5zi4UjWDyGdVm8Q');
+      hdKey.setCompressedAddresses(false);
+      expect(hdKey.address).equal('mhiNbdGpRe6RxF48oJJHtwAExseMFpfPiU');
+    });
+
+    it('should throw error on private key dervivation', function () {
+      expect(function () { hdKey.derivePrivate(1) }).to.throw('Cannot perform private derivation without a private key');
+    });
+
+    it('can derive new public key with public key derivation (< 0x80000000)', function () {
+      var childHdKey = hdKey.derivePublic(1);
+      expect(bytes.toHex(childHdKey.parent)).equal(bytes.toHex(hdKey.fpr))
+    });
+
+    it('should throw error on public key by private dervivation (> 0x80000000)', function () {
+      expect(function () { hdKey.derivePublic(1 + 0x80000000) }).to.throw('Cannot perform private derivation using the public child key derivation function');
+    });
+
+    it('should serialize pubkey only', function () {
+      expect(serialized).to.have.property('pub');
+      expect(serialized).to.not.have.property('prv');
+    });
+
+    it('serialized hex xpubkey should conform to BIP32 spec', function () {
+      expect(xPubKey.slice(0, 4)).eql(hex.toBytes('043587cf')); // 4 byte: version bytes (mainnet: 0x0488B21E public, 0x0488ADE4 private; testnet: 0x043587CF public, 0x04358394 private)
+      expect(xPubKey.slice(4, 5)).eql(hex.toBytes('00')) // 1 byte: depth: 0x00 for master nodes, 0x01 for level-1 descendants
+      expect(xPubKey.slice(5, 9)).eql(hex.toBytes('00000000'));
+      expect(xPubKey.slice(9, 13)).eql(hex.toBytes('00000000')); // child index
+      expect(xPubKey.slice(13, 45)).eql(hex.toBytes('9452b549be8cea3ecb7a84bec10dcfd94afe4d129ebfd3b3cb58eedf394ed271')); //chain codes
+      expect(xPubKey.slice(45, 78)).eql(hex.toBytes('029181CD57EA5F3F9B8F9F7D899845DC32846D0919FAFFF8242021C658787C4D73')) // compressed pub key
+    });
+
+  });
+
 });

@@ -2,7 +2,7 @@
 
 describe('Private Derivation', function () {
   describe('Test Vector 1', function () {
-    var m = new bitcoin.HDKey(hex.toBits('000102030405060708090a0b0c0d0e0f'))
+    var m = new bitcoin.HDKey({ seed: hex.toBits('000102030405060708090a0b0c0d0e0f') })
 
     it('m', function () {
       var s = m.serialize();
@@ -105,7 +105,7 @@ describe('Private Derivation', function () {
   });
 
   describe('Test Vector 2', function () {
-    var m = new bitcoin.HDKey(hex.toBits('fffcf9f6f3f0edeae7e4e1dedbd8d5d2cfccc9c6c3c0bdbab7b4b1aeaba8a5a29f9c999693908d8a8784817e7b7875726f6c696663605d5a5754514e4b484542'));
+    var m = new bitcoin.HDKey({ seed: hex.toBits('fffcf9f6f3f0edeae7e4e1dedbd8d5d2cfccc9c6c3c0bdbab7b4b1aeaba8a5a29f9c999693908d8a8784817e7b7875726f6c696663605d5a5754514e4b484542') });
 
     it('m', function () {
       var s = m.serialize();
@@ -210,7 +210,7 @@ describe('Private Derivation', function () {
 
 describe('Public Derivation', function () {
   describe('Test Vector 1', function () {
-    var m = new bitcoin.HDKey(hex.toBits('000102030405060708090a0b0c0d0e0f'));
+    var m = new bitcoin.HDKey({ seed: hex.toBits('000102030405060708090a0b0c0d0e0f') });
 
     it('m/0\'/1', function () {
       var key = m.derivePrivate(0 + 0x80000000)
@@ -258,7 +258,7 @@ describe('Public Derivation', function () {
   });
 
   describe('Test Vector 2', function () {
-    var m = new bitcoin.HDKey(hex.toBits('fffcf9f6f3f0edeae7e4e1dedbd8d5d2cfccc9c6c3c0bdbab7b4b1aeaba8a5a29f9c999693908d8a8784817e7b7875726f6c696663605d5a5754514e4b484542'));
+    var m = new bitcoin.HDKey({ seed: hex.toBits('fffcf9f6f3f0edeae7e4e1dedbd8d5d2cfccc9c6c3c0bdbab7b4b1aeaba8a5a29f9c999693908d8a8784817e7b7875726f6c696663605d5a5754514e4b484542') });
 
     it('m/0', function () {
       var key = m.derivePublic(0);
