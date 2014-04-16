@@ -72,6 +72,11 @@ describe('HDKey', function () {
       expect(bytes.toHex(childHdKey.parent)).equal(bytes.toHex(hdKey.fpr))
     });
 
+    it('public key derivation should be of same version', function () {
+      var childHdKey = hdKey.derivePublic(1);
+      expect(bytes.toHex(childHdKey.version)).eql(bytes.toHex(hdKey.version))
+    });
+
     it('should throw error on public key by private dervivation (> 0x80000000)', function () {
       expect(function () { hdKey.derivePublic(1 + 0x80000000) }).to.throw('Cannot perform private derivation using the public child key derivation function');
     });
@@ -123,6 +128,11 @@ describe('HDKey', function () {
     it('can derive new public key with public key derivation (< 0x80000000)', function () {
       var childHdKey = hdKey.derivePublic(1);
       expect(bytes.toHex(childHdKey.parent)).equal(bytes.toHex(hdKey.fpr))
+    });
+
+    it('public key derivation should be of same version', function () {
+      var childHdKey = hdKey.derivePublic(1);
+      expect(bytes.toHex(childHdKey.version)).eql(bytes.toHex(hdKey.version))
     });
 
     it('should throw error on public key by private dervivation (> 0x80000000)', function () {
@@ -183,6 +193,11 @@ describe('HDKey', function () {
       expect(bytes.toHex(childHdKey.parent)).equal(bytes.toHex(hdKey.fpr))
     });
 
+    it('public key derivation should be of same version', function () {
+      var childHdKey = hdKey.derivePublic(1);
+      expect(bytes.toHex(childHdKey.version)).eql(bytes.toHex(hdKey.version))
+    });
+
     it('should throw error on public key by private dervivation (> 0x80000000)', function () {
       expect(function () { hdKey.derivePublic(1 + 0x80000000) }).to.throw('Cannot perform private derivation using the public child key derivation function');
     });
@@ -234,6 +249,12 @@ describe('HDKey', function () {
     it('can derive new public key with public key derivation (< 0x80000000)', function () {
       var childHdKey = hdKey.derivePublic(1);
       expect(bytes.toHex(childHdKey.parent)).equal(bytes.toHex(hdKey.fpr))
+    });
+
+
+    it('public key derivation should be of same version', function () {
+      var childHdKey = hdKey.derivePublic(1);
+      expect(bytes.toHex(childHdKey.version)).eql(bytes.toHex(hdKey.version))
     });
 
     it('should throw error on public key by private dervivation (> 0x80000000)', function () {
