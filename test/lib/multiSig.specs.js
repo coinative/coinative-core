@@ -270,5 +270,36 @@ describe('MultiSigKey', function () {
         expect(multiSigKey.getAddress().toString()).equal('3Dfbkn7ukNC85ZkZLXp6tDZYpm5jpMxKBR');
       });
     });
+
+    describe('2 of 3, testnet', function () {
+      var multiSigKey = new bitcoin.MultiSigKey([
+        new bitcoin.HDKey({
+          chain: hex.toBits('9452b549be8cea3ecb7a84bec10dcfd94afe4d129ebfd3b3cb58eedf394ed271'),
+          pub: hex.toBits('0348E6D9C02B25EE89C676012D1800E325A94F14D36A6D03E4934B2150B85860D2'),
+          version: bitcoin.config.versions.bitcoin.testnet
+        }),
+        new bitcoin.HDKey({
+          chain: hex.toBits('9452b549be8cea3ecb7a84bec10dcfd94afe4d129ebfd3b3cb58eedf394ed271'),
+          pub: hex.toBits('02A75CCCD6E8338DF75CF742BA6EE1102B47D69D3E761D6A957089E53D66452957'),
+          version: bitcoin.config.versions.bitcoin.testnet
+        }),
+        new bitcoin.HDKey({
+          chain: hex.toBits('9452b549be8cea3ecb7a84bec10dcfd94afe4d129ebfd3b3cb58eedf394ed271'),
+          pub: hex.toBits('02CF692CE1C022948BB3E88DB5AE94664C08FB5DEF1122EA2F99F3324E0E6D4297'),
+          version: bitcoin.config.versions.bitcoin.testnet
+        })
+      ],2, true);
+
+      it('Create redeemScript', function () {
+        expect(bytes.toHex(multiSigKey.redeemScript.buffer)).equal('52210348e6d9c02b25ee89c676012d1800e325a94f14d36a6d03e4934b2150b85860d22102a75cccd6e8338df75cf742ba6ee1102b47d69d3e761d6a957089e53d664529572102cf692ce1c022948bb3e88db5ae94664c08fb5def1122ea2f99f3324e0e6d429753ae');
+      });
+
+      it('Create P2SH Address', function () {
+        expect(multiSigKey.getAddress().toString()).equal('2Mv4o98qqSc9DtK4CTuCvk9BTwv2MrAQrrA');
+      });
+    });
+
+
+
   });
 });
