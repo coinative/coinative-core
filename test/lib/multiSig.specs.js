@@ -217,35 +217,6 @@ describe('MultiSigKey', function () {
       });
     });
 
-    //https://gist.github.com/gavinandresen/3966071/raw/1f6cfa4208bc82ee5039876b4f065a705ce64df7/TwoOfThree.sh
-    describe('2 of 3, uncompressed keys, unsorted (Case 2)', function () {
-      var multiSigKey = new bitcoin.MultiSigKey([
-         new bitcoin.HDKey({
-          compressed: false,
-          chain: hex.toBits('9452b549be8cea3ecb7a84bec10dcfd94afe4d129ebfd3b3cb58eedf394ed271'),
-          pub: hex.toBits('0491bba2510912a5bd37da1fb5b1673010e43d2c6d812c514e91bfa9f2eb129e1c183329db55bd868e209aac2fbc02cb33d98fe74bf23f0c235d6126b1d8334f86')
-        }),
-        new bitcoin.HDKey({
-          compressed: false,
-          chain: hex.toBits('9452b549be8cea3ecb7a84bec10dcfd94afe4d129ebfd3b3cb58eedf394ed271'),
-          pub: hex.toBits('04865c40293a680cb9c020e7b1e106d8c1916d3cef99aa431a56d253e69256dac09ef122b1a986818a7cb624532f062c1d1f8722084861c5c3291ccffef4ec6874')
-        }),
-        new bitcoin.HDKey({
-          compressed: false,
-          chain: hex.toBits('9452b549be8cea3ecb7a84bec10dcfd94afe4d129ebfd3b3cb58eedf394ed271'),
-          pub: hex.toBits('048d2455d2403e08708fc1f556002f1b6cd83f992d085097f9974ab08a28838f07896fbab08f39495e15fa6fad6edbfb1e754e35fa1c7844c41f322a1863d46213')
-        })
-      ], 2, true);
-
-      it('Create redeemScript', function () {
-         expect(bytes.toHex(multiSigKey.redeemScript.buffer)).equal('52410491bba2510912a5bd37da1fb5b1673010e43d2c6d812c514e91bfa9f2eb129e1c183329db55bd868e209aac2fbc02cb33d98fe74bf23f0c235d6126b1d8334f864104865c40293a680cb9c020e7b1e106d8c1916d3cef99aa431a56d253e69256dac09ef122b1a986818a7cb624532f062c1d1f8722084861c5c3291ccffef4ec687441048d2455d2403e08708fc1f556002f1b6cd83f992d085097f9974ab08a28838f07896fbab08f39495e15fa6fad6edbfb1e754e35fa1c7844c41f322a1863d4621353ae');
-      });
-
-      it('Create P2SH Address', function () {
-        expect(multiSigKey.getAddress().toString()).equal('3QJmV3qfvL9SuYo34YihAf3sRCW3qSinyC');
-      });
-    });
-
     describe('2 of 3, compressed keys, unsorted', function () {
       var multiSigKey = new bitcoin.MultiSigKey([
         new bitcoin.HDKey({
@@ -298,8 +269,5 @@ describe('MultiSigKey', function () {
         expect(multiSigKey.getAddress().toString()).equal('2Mv4o98qqSc9DtK4CTuCvk9BTwv2MrAQrrA');
       });
     });
-
-
-
   });
 });

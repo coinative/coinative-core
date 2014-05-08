@@ -14,7 +14,10 @@ var bytes = {
   }
 };
 
-var bits = { toHex: sjcl.codec.hex.fromBits };
+var bits = {
+  toHex: sjcl.codec.hex.fromBits,
+  toBytes: sjcl.codec.bytes.fromBits
+};
 
 if(typeof module !== 'undefined' && module.exports){
  	module.exports = {
