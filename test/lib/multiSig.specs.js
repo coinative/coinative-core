@@ -58,103 +58,6 @@ describe('MultiSigKey', function () {
 
       expect(multiSigKey.getAddress().toString()).equal('3F9F3gm8WpnxBMuXS3TSrdJWKbYUpEhogW');
     });
-
-    // bitcoind addmultisigaddress 2 '["041086f00a358a099eb92c9ae7c3a48f0d37ae58c3952edc87a293c9c449e438f993dc90bb34e827040cc2e8ee42d1cc713ed3d99aa4a74bfd859a05278bf64954",
-    // "041558d6cc3c80504aab547c199161a45bfa726caefa70938a89d3c7cb5ad8c245b01e930bc6c9d489492be16a1c89b13ec0ba36345cf8f9813ff8457d7201d208"]'
-    it('2 of 2, sorted', function () {
-      var multiSigKey = new bitcoin.MultiSigKey([
-        new bitcoin.HDKey({
-          compressed: false,
-          chain: hex.toBits('9452b549be8cea3ecb7a84bec10dcfd94afe4d129ebfd3b3cb58eedf394ed271'),
-          pub: hex.toBits('041558d6cc3c80504aab547c199161a45bfa726caefa70938a89d3c7cb5ad8c245b01e930bc6c9d489492be16a1c89b13ec0ba36345cf8f9813ff8457d7201d208')
-        }),
-        new bitcoin.HDKey({
-          compressed: false,
-          chain: hex.toBits('9452b549be8cea3ecb7a84bec10dcfd94afe4d129ebfd3b3cb58eedf394ed271'),
-          pub: hex.toBits('041086f00a358a099eb92c9ae7c3a48f0d37ae58c3952edc87a293c9c449e438f993dc90bb34e827040cc2e8ee42d1cc713ed3d99aa4a74bfd859a05278bf64954')
-        })
-      ], 2);
-
-
-      expect(bits.toHex(multiSigKey.hdKeys[0].pub)).equal('041086f00a358a099eb92c9ae7c3a48f0d37ae58c3952edc87a293c9c449e438f993dc90bb34e827040cc2e8ee42d1cc713ed3d99aa4a74bfd859a05278bf64954');
-      expect(bits.toHex(multiSigKey.hdKeys[1].pub)).equal('041558d6cc3c80504aab547c199161a45bfa726caefa70938a89d3c7cb5ad8c245b01e930bc6c9d489492be16a1c89b13ec0ba36345cf8f9813ff8457d7201d208');
-      expect(multiSigKey.getAddress().toString()).equal('3NmdK9fDPAsRVVoFv8hXmF1wJoGPU8rCGe');
-    });
-
-    // bitcoind addmultisigaddress 1 '["0414bb6fc9f035eab2da833df799ca8acd0f563305b2264326ab53d3c04e4c5775bb8a58b31703a087de00f3f487558407a0482531a877f7ed89d9fe52d9bb3821",
-    // "046f8807f8b0a4879485baecdf841d982d08510812479ade46b9f168ee075a68ba9069f4ce7ba105949a2b0ca5bf1ff21cf6fdf59d4659597a6355cc76e8e4d577",
-    // "04e1db129e3ea91a75e530dbfaa6c613c95e2043258251c137ca6e93ec1ad8277f5b719e4b9081239a2c09a9d3e40a56f1a688696280308ab995eb30c23ea7e31c"]'
-    it('1 of 3, sorted', function () {
-      var multiSigKey = new bitcoin.MultiSigKey([
-        new bitcoin.HDKey({
-          compressed: false,
-          chain: hex.toBits('9452b549be8cea3ecb7a84bec10dcfd94afe4d129ebfd3b3cb58eedf394ed271'),
-          pub: hex.toBits('04e1db129e3ea91a75e530dbfaa6c613c95e2043258251c137ca6e93ec1ad8277f5b719e4b9081239a2c09a9d3e40a56f1a688696280308ab995eb30c23ea7e31c')
-        }),
-        new bitcoin.HDKey({
-          compressed: false,
-          chain: hex.toBits('9452b549be8cea3ecb7a84bec10dcfd94afe4d129ebfd3b3cb58eedf394ed271'),
-          pub: hex.toBits('046f8807f8b0a4879485baecdf841d982d08510812479ade46b9f168ee075a68ba9069f4ce7ba105949a2b0ca5bf1ff21cf6fdf59d4659597a6355cc76e8e4d577')
-        }),
-        new bitcoin.HDKey({
-          compressed: false,
-          chain: hex.toBits('9452b549be8cea3ecb7a84bec10dcfd94afe4d129ebfd3b3cb58eedf394ed271'),
-          pub: hex.toBits('0414bb6fc9f035eab2da833df799ca8acd0f563305b2264326ab53d3c04e4c5775bb8a58b31703a087de00f3f487558407a0482531a877f7ed89d9fe52d9bb3821')
-        })
-      ], 1);
-
-      expect(bits.toHex(multiSigKey.hdKeys[0].pub)).equal('0414bb6fc9f035eab2da833df799ca8acd0f563305b2264326ab53d3c04e4c5775bb8a58b31703a087de00f3f487558407a0482531a877f7ed89d9fe52d9bb3821');
-      expect(bits.toHex(multiSigKey.hdKeys[1].pub)).equal('046f8807f8b0a4879485baecdf841d982d08510812479ade46b9f168ee075a68ba9069f4ce7ba105949a2b0ca5bf1ff21cf6fdf59d4659597a6355cc76e8e4d577');
-      expect(bits.toHex(multiSigKey.hdKeys[2].pub)).equal('04e1db129e3ea91a75e530dbfaa6c613c95e2043258251c137ca6e93ec1ad8277f5b719e4b9081239a2c09a9d3e40a56f1a688696280308ab995eb30c23ea7e31c');
-      expect(multiSigKey.getAddress().toString()).equal('3BxHtx5Po9UPCbwvXXdu5rTqYxZDpg1Mp1');
-    });
-  });
-
-  describe('Compressed HDKeys (public)', function () {
-    it('2 of 3, sorted', function () {
-      var multiSigKey = new bitcoin.MultiSigKey([
-        new bitcoin.HDKey({
-          chain: hex.toBits('9452b549be8cea3ecb7a84bec10dcfd94afe4d129ebfd3b3cb58eedf394ed271'),
-          pub: hex.toBits('03d728ad6757d4784effea04d47baafa216cf474866c2d4dc99b1e8e3eb936e730')
-        }),
-        new bitcoin.HDKey({
-          chain: hex.toBits('9452b549be8cea3ecb7a84bec10dcfd94afe4d129ebfd3b3cb58eedf394ed271'),
-          pub: hex.toBits('02d83bba35a8022c247b645eed6f81ac41b7c1580de550e7e82c75ad63ee9ac2fd')
-        }),
-        new bitcoin.HDKey({
-          chain: hex.toBits('9452b549be8cea3ecb7a84bec10dcfd94afe4d129ebfd3b3cb58eedf394ed271'),
-          pub: hex.toBits('03aeb681df5ac19e449a872b9e9347f1db5a0394d2ec5caf2a9c143f86e232b0d9')
-        }),
-      ], 2);
-
-      expect(bits.toHex(multiSigKey.hdKeys[0].pub)).equal('02d83bba35a8022c247b645eed6f81ac41b7c1580de550e7e82c75ad63ee9ac2fd');
-      expect(bits.toHex(multiSigKey.hdKeys[1].pub)).equal('03aeb681df5ac19e449a872b9e9347f1db5a0394d2ec5caf2a9c143f86e232b0d9');
-      expect(bits.toHex(multiSigKey.hdKeys[2].pub)).equal('03d728ad6757d4784effea04d47baafa216cf474866c2d4dc99b1e8e3eb936e730');
-      expect(multiSigKey.getAddress().toString()).equal('3Faj1Lk5dmEhjiVw2RRT5w8iRrAUiwY2z3');
-    });
-
-    it('3 of 3, sorted', function () {
-      var multiSigKey = new bitcoin.MultiSigKey([
-        new bitcoin.HDKey({
-          chain: hex.toBits('9452b549be8cea3ecb7a84bec10dcfd94afe4d129ebfd3b3cb58eedf394ed271'),
-          pub: hex.toBits('03d728ad6757d4784effea04d47baafa216cf474866c2d4dc99b1e8e3eb936e730')
-        }),
-        new bitcoin.HDKey({
-          chain: hex.toBits('9452b549be8cea3ecb7a84bec10dcfd94afe4d129ebfd3b3cb58eedf394ed271'),
-          pub: hex.toBits('02d83bba35a8022c247b645eed6f81ac41b7c1580de550e7e82c75ad63ee9ac2fd')
-        }),
-        new bitcoin.HDKey({
-          chain: hex.toBits('9452b549be8cea3ecb7a84bec10dcfd94afe4d129ebfd3b3cb58eedf394ed271'),
-          pub: hex.toBits('03aeb681df5ac19e449a872b9e9347f1db5a0394d2ec5caf2a9c143f86e232b0d9')
-        })
-      ], 3);
-
-      expect(bits.toHex(multiSigKey.hdKeys[0].pub)).equal('02d83bba35a8022c247b645eed6f81ac41b7c1580de550e7e82c75ad63ee9ac2fd');
-      expect(bits.toHex(multiSigKey.hdKeys[1].pub)).equal('03aeb681df5ac19e449a872b9e9347f1db5a0394d2ec5caf2a9c143f86e232b0d9');
-      expect(bits.toHex(multiSigKey.hdKeys[2].pub)).equal('03d728ad6757d4784effea04d47baafa216cf474866c2d4dc99b1e8e3eb936e730');
-      expect(multiSigKey.getAddress().toString()).equal('34LJYmuLR6tCYA3pzskyP9nDPXF7mUCTdQ');
-
-    });
   });
 
   describe('Public Key Derivation', function () {
@@ -269,5 +172,6 @@ describe('MultiSigKey', function () {
         expect(multiSigKey.getAddress().toString()).equal('2Mv4o98qqSc9DtK4CTuCvk9BTwv2MrAQrrA');
       });
     });
+
   });
 });
