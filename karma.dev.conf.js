@@ -13,7 +13,6 @@ module.exports = function(config) {
 
     // list of files / patterns to load in the browser
     files: [
-      //'node_modules/bitcoinjs-lib/build/bitcoinjs-min.js',
       'lib/legacy/jsbn.js',
       'node_modules/sjcl/sjcl.js',
       'lib/sjcl-ext/*.js',
@@ -26,20 +25,20 @@ module.exports = function(config) {
 
     // list of files to exclude
     exclude: [
-      
-    ],
 
+    ],
 
     // test results reporter to use
     // possible values: 'dots', 'progress', 'junit', 'growl', 'coverage'
-    reporters: ['mocha', 'coverage'],
+    reporters: ['mocha','coverage'],
+
     preprocessors: {
       // source files, that you wanna generate coverage for
       // do not include tests or libraries
       // (these files will be instrumented by Istanbul)
       'lib/*.js': ['coverage']
     },
-    // optionally, configure the reporter
+    //optionally, configure the reporter
     coverageReporter: {
       type : 'html',
       dir : 'coverage/'
@@ -59,7 +58,7 @@ module.exports = function(config) {
 
 
     // enable / disable watching file and executing tests whenever any file changes
-    autoWatch: true,
+    autoWatch: false,
 
 
     // Start these browsers, currently available:
@@ -70,7 +69,7 @@ module.exports = function(config) {
     // - Safari (only Mac)
     // - PhantomJS
     // - IE (only Windows)
-    browsers: [],
+    browsers: ['PhantomJS'],
 
 
     // If browser does not capture in given timeout [ms], kill it
@@ -79,6 +78,6 @@ module.exports = function(config) {
 
     // Continuous Integration mode
     // if true, it capture browsers, run tests and exit
-    singleRun: false
+    singleRun: true
   });
 };

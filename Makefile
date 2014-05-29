@@ -8,30 +8,26 @@ BITCOIND = bitcoind
 clean:
 	rm -rf bitcoin.js
 
-build-sjcl: 
-	cd node_modules/sjcl/ && ./configure --with-all --compress=none && make
+build-sjcl:
+	cd node_modules/sjcl/ && ./configure --without-srp --without-ccm --without-ocb2 --without-gcm --with-codecBytes --with-sha512 --with-bn --with-ecc --compress=none && make
 
 build:	clean	build-sjcl
 	mkdir -p dist
 	node_modules/uglify-js/bin/uglifyjs $(LIB_JSBN_SRC) $(LIB_SJCL_SRC) $(LIB_SJCL_EXT_SRC) $(LIB_SRC) -b --output dist/coinative-core.js
-	node_modules/uglify-js/bin/uglifyjs $(LIB_JSBN_SRC) $(LIB_SJCL_SRC) $(LIB_SJCL_EXT_SRC) $(LIB_SRC) --output dist/coinative-core.min.js
+	node_modules/uglify-js/bin/uglifyjs dist/coinative-core.js --output dist/coinative-core.min.js
 
 test-node:	build
-	node_modules/.bin/mocha test/setup.js "test/**/*.specs.js" --reporter spec
+	node_modules/.bin/mocha test/support/env.js "test/**/*.specs.js" --reporter spec
 
 test-browser:	build
 	node_modules/.bin/karma start karma.conf.js
 
-test-int:	
-	@echo "add BITCOIND= to specify a path"
-	node_modules/.bin/mocha --bitcoind=$(BITCOIND) test-int/setup.js "test-int/**/*.specs.js" --reporter spec
+test:	test-node	test-browser
 
-test:	test-node
+watch:
+	node_modules/.bin/karma start karma.dev.conf.js --no-single-run
 
-dev-browser: 
+cover:
 	node_modules/.bin/karma start karma.dev.conf.js
 
-cover:	
-	node_modules/.bin/karma start karma.cover.conf.js
-
-.PHONY: test test-int
+.PHONY: test
